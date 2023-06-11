@@ -16,6 +16,15 @@ function createUserByEmailAndPassword(user) {
   });
 }
 
+function updateUserById(id, user) {
+  return db.user.update({
+    where: {
+      id,
+    },
+    data: user,
+  });
+}
+
 function findUserById(id) {
   return db.user.findUnique({
     where: {
@@ -28,9 +37,19 @@ function allUsers() {
   return db.user.findMany();
 }
 
+function deleteUserById(userId) {
+  return db.user.delete({
+    where: {
+      id: userId,
+    },
+  });
+}
+
 module.exports = {
   findUserByEmail,
   findUserById,
   createUserByEmailAndPassword,
   allUsers,
+  deleteUserById,
+  updateUserById,
 };

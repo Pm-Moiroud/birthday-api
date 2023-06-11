@@ -4,28 +4,63 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = "mysql://root@127.0.0.1:3306/your-bdd"
+  url      = "mysql://root@127.0.0.1:3306/birthday-api"
 }
 
 model User {
-  id            String         @id @unique @default(uuid())
-  pseudo        String         @unique
-  email         String         @unique
-  password      String
-  refreshTokens RefreshToken[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                   String         @id @unique @default(uuid())
+  pseudo               String         @db.VarChar(255)
+  email                String         @unique @db.VarChar(255)
+  password             String
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  canReceiveEmailNotif Boolean        @default(true) @map("can_receive_email_notif")
+  canReceivePushNotif  Boolean        @default(true) @map("can_receive_push_notif")
+  birthdays            Birthday[]
+  refreshTokens        RefreshToken[]
+
   @@map("users")
 }
 
 model RefreshToken {
   id          String   @id @unique @default(uuid())
   hashedToken String
-  userId      String
-  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   revoked     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("refresh_tokens")
+  @@index([userId], map: "refreshTokens_user_id_fkey")
+  @@map("refreshTokens")
+}
+
+model Birthday {
+  id             String   @id @unique @default(uuid())
+  name           String   @db.VarChar(255)
+  started_at     DateTime
+  ended_at       DateTime
+  reminder_push  Int      @default(0)
+  reminder_email Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  userId         String   @map("user_id")
+  statusId       String   @map("status_id")
+  Status         Status   @relation(fields: [statusId], references: [id], onDelete: Cascade)
+  User           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "birthdays_user_id_fkey")
+  @@index([statusId], map: "birthdays_status_id_fkey")
+  @@map("birthdays")
+}
+
+model Status {
+  id        String     @id @unique @default(uuid())
+  label     String     @db.VarChar(255)
+  slug      String     @unique @db.VarChar(255)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  Birthdays Birthday[]
+
+  @@map("statuses")
 }

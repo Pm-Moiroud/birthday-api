@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 // Usually I keep the token between 5 minutes - 15 minutes
-function generateAccessToken(user) {
+function generateaccessToken(user) {
   return jwt.sign({ userId: user.id }, process.env.JWT_ACCESS_SECRET, {
     expiresIn: '5h',
   });
@@ -25,7 +25,7 @@ function generateRefreshToken(user, jti) {
 }
 
 function generateTokens(user, jti) {
-  const accessToken = generateAccessToken(user);
+  const accessToken = generateaccessToken(user);
   const refreshToken = generateRefreshToken(user, jti);
 
   return {
@@ -35,7 +35,7 @@ function generateTokens(user, jti) {
 }
 
 module.exports = {
-  generateAccessToken,
+  generateaccessToken,
   generateRefreshToken,
   generateTokens,
 };

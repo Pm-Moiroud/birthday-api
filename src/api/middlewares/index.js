@@ -1,26 +1,25 @@
 const jwt = require('jsonwebtoken');
+const makeError = require('../../utils/makeError');
+const { formatAuthorization } = require('../../utils/commons');
 
-function isAuthenticated(req, res, next) {
+function isAuthenticated(req, _, next) {
   const { authorization } = req.headers;
 
   if (!authorization) {
-    res.status(401);
-    throw new Error('Provide a valid authorization header with a Bearer token');
+    makeError('Provide a valid authorization header with a Bearer token', 401);
   }
 
+  let jwtHeaders = formatAuthorization(authorization);
   try {
-    const token = authorization.split(' ')[1];
-    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-
-    console.log(payload);
+    const payload = jwt.verify(jwtHeaders, process.env.JWT_ACCESS_SECRET);
     req.payload = payload;
-    next(); // Call next() to proceed to the next middleware/route handler
+    next();
   } catch (err) {
-    res.status(401);
+    console.error(err);
     if (err.name === 'TokenExpiredError') {
-      throw new Error(err.name);
+      makeError(err.name, 403);
     }
-    throw new Error('🚫 Unauthorized 🚫');
+    makeError('Unauthorized', 401);
   }
 }
 

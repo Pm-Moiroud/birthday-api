@@ -44,9 +44,17 @@ function revokeTokens(userId) {
   });
 }
 
+function deleteAllUserRefreshTokens(userId) {
+  return db.refreshToken.deleteMany({
+    where: {
+      userId,
+    },
+  });
+}
+
 module.exports = {
   addRefreshTokenToWhitelist,
   findRefreshTokenById,
-  deleteRefreshToken,
+  deleteAllUserRefreshTokens,
   revokeTokens,
 };

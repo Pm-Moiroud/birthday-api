@@ -19,25 +19,27 @@ const {
 } = require('../services/AuthServices');
 
 const { hashToken } = require('../../utils/hashToken');
+const makeError = require('../../utils/makeError');
 
 async function register(req, res, next) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400);
-      throw new Error('You must provide an email and a password.');
-    }
+    const { email, password, pseudo } = req.body;
+    if (!email || !password)
+      makeError('You must provide an email and a password.', 500);
 
     const existingUser = await findUserByEmail(email);
 
-    if (existingUser) {
-      res.status(400);
-      throw new Error('Email already in use.');
-    }
+    if (existingUser) makeError('Email already in use.', 500);
 
-    const user = await createUserByEmailAndPassword({ email, password });
+    const user = await createUserByEmailAndPassword({
+      email,
+      password,
+      pseudo,
+    });
     const jti = uuidv4();
+
     const { accessToken, refreshToken } = generateTokens(user, jti);
+
     await addRefreshTokenToWhitelist({ jti, refreshToken, userId: user.id });
 
     res.json({
@@ -54,21 +56,15 @@ async function login(req, res, next) {
     const { email, password } = req.body;
     if (!email || !password) {
       res.status(400);
-      throw new Error('You must provide an email and a password.');
+      makeError('You must provide an email and a password.', 500);
     }
 
     const existingUser = await findUserByEmail(email);
 
-    if (!existingUser) {
-      res.status(403);
-      throw new Error('Invalid login credentials.');
-    }
+    if (!existingUser) makeError('Invalid login credentials.', 500);
 
     const validPassword = await bcrypt.compare(password, existingUser.password);
-    if (!validPassword) {
-      res.status(403);
-      throw new Error('Invalid login credentials.');
-    }
+    if (!validPassword) makeError('Invalid login credentials.', 500);
 
     const jti = uuidv4();
     const { accessToken, refreshToken } = generateTokens(existingUser, jti);
@@ -81,6 +77,7 @@ async function login(req, res, next) {
     res.json({
       accessToken,
       refreshToken,
+      user: existingUser,
     });
   } catch (err) {
     next(err);
@@ -92,26 +89,24 @@ async function refreshToken(req, res, next) {
     const { refreshToken } = req.body;
     if (!refreshToken) {
       res.status(400);
-      throw new Error('Missing refresh token.');
+      makeError('Missing refresh token.', 404);
     }
+
     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     const savedRefreshToken = await findRefreshTokenById(payload.jti);
 
     if (!savedRefreshToken || savedRefreshToken.revoked === true) {
-      res.status(401);
-      throw new Error('Unauthorized');
+      makeError('Unauthorized', 401);
     }
 
     const hashedToken = hashToken(refreshToken);
     if (hashedToken !== savedRefreshToken.hashedToken) {
-      res.status(401);
-      throw new Error('Unauthorized');
+      makeError('Unauthorized', 401);
     }
 
     const user = await findUserById(payload.userId);
     if (!user) {
-      res.status(401);
-      throw new Error('Unauthorized');
+      makeError('Unauthorized', 401);
     }
 
     await deleteRefreshToken(savedRefreshToken.id);
@@ -139,7 +134,10 @@ async function revokeRefreshTokens(req, res, next) {
   try {
     const { userId } = req.body;
     await revokeTokens(userId);
-    res.json({ message: `Tokens revoked for user with id #${userId}` });
+    res.json({
+      message: `Tokens revoked for user with id #${userId}`,
+      status: 200,
+    });
   } catch (err) {
     next(err);
   }
